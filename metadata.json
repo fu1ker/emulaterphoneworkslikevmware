@@ -1,0 +1,6 @@
+{
+  "name": "Nested App Builder",
+  "description": "Build interactive apps, and inside those apps you can build more apps, recursively.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
