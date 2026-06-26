@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -16,6 +17,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,7 +46,7 @@ fun WorkspaceScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val components by viewModel.getComponentsForApp(app.id).collectAsState()
+    val components by viewModel.getComponentsForApp(app.id).collectAsStateWithLifecycle()
     var selectedTab by remember { mutableIntStateOf(0) } // 0 = Design Mode, 1 = Run Mode
 
     // Dialog state
@@ -146,11 +148,13 @@ fun WorkspaceScreen(
                 targetState = selectedTab,
                 transitionSpec = {
                     if (targetState > initialState) {
-                        (slideInHorizontally { width -> width } + fadeIn()).togetherWith(
-                            slideOutHorizontally { width -> -width } + fadeOut())
+                        (slideInHorizontally(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) { width -> (width * 0.1f).toInt() } + fadeIn(animationSpec = tween(220))).togetherWith(
+                            slideOutHorizontally(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) { width -> -(width * 0.1f).toInt() } + fadeOut(animationSpec = tween(180))
+                        )
                     } else {
-                        (slideInHorizontally { width -> -width } + fadeIn()).togetherWith(
-                            slideOutHorizontally { width -> width } + fadeOut())
+                        (slideInHorizontally(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) { width -> -(width * 0.1f).toInt() } + fadeIn(animationSpec = tween(220))).togetherWith(
+                            slideOutHorizontally(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) { width -> (width * 0.1f).toInt() } + fadeOut(animationSpec = tween(180))
+                        )
                     }
                 },
                 label = "WorkspaceModeTransition"
@@ -538,6 +542,7 @@ fun RunModeSimulator(
     // Local interactive states for simulating live usage
     val counterStates = remember { mutableStateMapOf<String, Int>() }
     val textInputStates = remember { mutableStateMapOf<String, String>() }
+    val primaryColor = remember(app.primaryColor) { Color(app.primaryColor) }
 
     Column(
         modifier = modifier
@@ -630,7 +635,7 @@ fun RunModeSimulator(
                             Box(modifier = Modifier.animateItem()) {
                                 SimulatedComponentRow(
                                     component = component,
-                                    primaryColor = Color(app.primaryColor),
+                                    primaryColor = primaryColor,
                                     counterStates = counterStates,
                                     textInputStates = textInputStates,
                                     viewModel = viewModel,
@@ -707,7 +712,7 @@ fun SimulatedComponentRow(
             }
         }
         "COUNTER" -> {
-            val count = counterStates.getOrPut(component.id) { 0 }
+            val count = counterStates[component.id] ?: 0
             Card(
                 modifier = Modifier.fillMaxWidth().testTag("sim_counter_${component.id}"),
                 shape = RoundedCornerShape(8.dp),
@@ -748,7 +753,7 @@ fun SimulatedComponentRow(
             }
         }
         "INPUT" -> {
-            val text = textInputStates.getOrPut(component.id) { "" }
+            val text = textInputStates[component.id] ?: ""
             OutlinedTextField(
                 value = text,
                 onValueChange = { textInputStates[component.id] = it },
@@ -786,24 +791,11 @@ fun SimulatedComponentRow(
                     )
                 }
             } else {
-                // Fetch and observe sub-app
-                val subApp by viewModel.getSubAppFlow(subAppId).collectAsState(initial = null)
-                if (subApp != null) {
-                    NestedAppInlineSimulator(
-                        app = subApp!!,
-                        viewModel = viewModel,
-                        onShowNotification = onShowNotification
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                    }
-                }
+                NestedAppInlineSimulator(
+                    appId = subAppId,
+                    viewModel = viewModel,
+                    onShowNotification = onShowNotification
+                )
             }
         }
     }
@@ -812,11 +804,26 @@ fun SimulatedComponentRow(
 // Recursive Nested App Simulator
 @Composable
 fun NestedAppInlineSimulator(
-    app: AppEntity,
+    appId: String,
     viewModel: AppViewModel,
     onShowNotification: (String) -> Unit
 ) {
-    val subComponents by viewModel.getComponentsForApp(app.id).collectAsState()
+    val subApp by viewModel.getSubAppFlow(appId).collectAsStateWithLifecycle(initialValue = null)
+
+    if (subApp == null) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator(modifier = Modifier.size(24.dp))
+        }
+        return
+    }
+
+    val app = subApp!!
+    val subComponents by viewModel.getComponentsForApp(app.id).collectAsStateWithLifecycle()
     val subCounterStates = remember { mutableStateMapOf<String, Int>() }
     val subInputStates = remember { mutableStateMapOf<String, String>() }
 

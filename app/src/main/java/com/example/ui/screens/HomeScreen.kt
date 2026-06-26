@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.AppEntity
 import com.example.ui.AppViewModel
 
@@ -34,7 +35,7 @@ fun HomeScreen(
     onAppClick: (AppEntity) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val apps by viewModel.topLevelApps.collectAsState()
+    val apps by viewModel.topLevelApps.collectAsStateWithLifecycle()
     var showCreateDialog by remember { mutableStateOf(false) }
 
     Scaffold(

@@ -14,6 +14,7 @@ class AppViewModel(private val repository: AppRepository) : ViewModel() {
 
     // List of top-level apps
     val topLevelApps: StateFlow<List<AppEntity>> = repository.topLevelApps
+        .distinctUntilChanged()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -26,10 +27,12 @@ class AppViewModel(private val repository: AppRepository) : ViewModel() {
 
     // Map of active component Flows per appId to easily support nested rendering
     private val _componentsMap = mutableMapOf<String, StateFlow<List<ComponentEntity>>>()
+    private val _subAppMap = mutableMapOf<String, StateFlow<AppEntity?>>()
 
     fun getComponentsForApp(appId: String): StateFlow<List<ComponentEntity>> {
         return _componentsMap.getOrPut(appId) {
             repository.getComponentsFlow(appId)
+                .distinctUntilChanged()
                 .stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(5000),
@@ -188,8 +191,16 @@ class AppViewModel(private val repository: AppRepository) : ViewModel() {
     }
 
     // Get an app synchronously or via Flow for inline sub-app rendering
-    fun getSubAppFlow(subAppId: String): Flow<AppEntity?> {
-        return repository.getAppByIdFlow(subAppId)
+    fun getSubAppFlow(subAppId: String): StateFlow<AppEntity?> {
+        return _subAppMap.getOrPut(subAppId) {
+            repository.getAppByIdFlow(subAppId)
+                .distinctUntilChanged()
+                .stateIn(
+                    scope = viewModelScope,
+                    started = SharingStarted.WhileSubscribed(5000),
+                    initialValue = null
+                )
+        }
     }
 }
 
