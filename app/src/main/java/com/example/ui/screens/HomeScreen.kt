@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import androidx.compose.animation.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -187,7 +188,8 @@ fun HomeScreen(
                         AppCardItem(
                             app = app,
                             onClick = { onAppClick(app) },
-                            onDelete = { viewModel.deleteApp(app.id) }
+                            onDelete = { viewModel.deleteApp(app.id) },
+                            modifier = Modifier.animateItem()
                         )
                     }
                 }
@@ -260,7 +262,7 @@ fun AppCardItem(
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "ID: ${app.id.take(8)}...",
-                    style = FontFamily.Monospace,
+                    fontFamily = FontFamily.Monospace,
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                 )

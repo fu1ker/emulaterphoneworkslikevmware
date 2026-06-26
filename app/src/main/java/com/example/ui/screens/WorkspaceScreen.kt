@@ -80,7 +80,7 @@ fun WorkspaceScreen(
                         }
                         Text(
                             text = "Project ID: ${app.id.take(8)}",
-                            style = FontFamily.Monospace,
+                            fontFamily = FontFamily.Monospace,
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                         )
@@ -342,7 +342,8 @@ fun DesignModeLayout(
                         onMoveUp = { onMoveUp(component) },
                         onMoveDown = { onMoveDown(component) },
                         onLinkSubApp = { onLinkSubApp(component) },
-                        onDesignSubApp = onDesignSubApp
+                        onDesignSubApp = onDesignSubApp,
+                        modifier = Modifier.animateItem()
                     )
                 }
             }
@@ -363,7 +364,7 @@ fun DesignComponentCard(
     modifier: Modifier = Modifier
 ) {
     // Get visual characteristics based on component type
-    val (icon, typeLabel, desc) = when (component.type) {
+    val info = when (component.type) {
         "TEXT" -> Triple(Icons.Default.TextFields, "Text Display", "Shows customized label (font: ${component.value}sp)")
         "BUTTON" -> Triple(Icons.Default.SmartButton, "Action Button", "Runs interactive popup with alert: \"${component.value}\"")
         "COUNTER" -> Triple(Icons.Default.AddCircleOutline, "Interactive Counter", "Displays a live incrementer widget")
@@ -373,6 +374,9 @@ fun DesignComponentCard(
         "NESTED_APP" -> Triple(Icons.Default.Layers, "Nested App Cell", "The Inception gate: houses a sub-app builder inside")
         else -> Triple(Icons.Default.Extension, "Component", "")
     }
+    val icon = info.first
+    val typeLabel = info.second
+    val desc = info.third
 
     Card(
         modifier = modifier
@@ -623,19 +627,52 @@ fun RunModeSimulator(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(components, key = { it.id }) { component ->
-                            SimulatedComponentRow(
-                                component = component,
-                                primaryColor = Color(app.primaryColor),
-                                counterStates = counterStates,
-                                textInputStates = textInputStates,
-                                viewModel = viewModel,
-                                onShowNotification = onShowNotification
-                            )
+                            Box(modifier = Modifier.animateItem()) {
+                                SimulatedComponentRow(
+                                    component = component,
+                                    primaryColor = Color(app.primaryColor),
+                                    counterStates = counterStates,
+                                    textInputStates = textInputStates,
+                                    viewModel = viewModel,
+                                    onShowNotification = onShowNotification
+                                )
+                            }
                         }
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+fun AnimatedCounterText(
+    count: Int,
+    modifier: Modifier = Modifier
+) {
+    AnimatedContent(
+        targetState = count,
+        transitionSpec = {
+            if (targetState > initialState) {
+                (slideInVertically { height -> height } + fadeIn()).togetherWith(
+                    slideOutVertically { height -> -height } + fadeOut()
+                )
+            } else {
+                (slideInVertically { height -> -height } + fadeIn()).togetherWith(
+                    slideOutVertically { height -> height } + fadeOut()
+                )
+            }
+        },
+        label = "CounterAnimation",
+        modifier = modifier
+    ) { targetCount ->
+        Text(
+            text = targetCount.toString(),
+            fontWeight = FontWeight.Bold,
+            fontSize = 16.sp,
+            modifier = Modifier.widthIn(min = 24.dp),
+            textAlign = TextAlign.Center
+        )
     }
 }
 
@@ -699,13 +736,7 @@ fun SimulatedComponentRow(
                         ) {
                             Icon(Icons.Default.Remove, contentDescription = "Decrement", modifier = Modifier.size(16.dp))
                         }
-                        Text(
-                            text = count.toString(),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp,
-                            modifier = Modifier.widthIn(min = 24.dp),
-                            textAlign = TextAlign.Center
-                        )
+                        AnimatedCounterText(count = count)
                         IconButton(
                             onClick = { counterStates[component.id] = count + 1 },
                             modifier = Modifier.size(32.dp).background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)

@@ -5,11 +5,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.*
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -42,28 +42,46 @@ class MainActivity : ComponentActivity() {
 
                     val navStack by appViewModel.navigationStack.collectAsState()
 
-                    if (navStack.isEmpty()) {
-                        HomeScreen(
-                            viewModel = appViewModel,
-                            onAppClick = { app ->
-                                appViewModel.pushApp(app)
+                    AnimatedContent(
+                        targetState = navStack,
+                        transitionSpec = {
+                            if (targetState.size > initialState.size) {
+                                // Deeper into nesting - slide content to the left
+                                (slideInHorizontally { width -> width } + fadeIn()).togetherWith(
+                                    slideOutHorizontally { width -> -width / 4 } + fadeOut()
+                                )
+                            } else {
+                                // Popping back up - slide content to the right
+                                (slideInHorizontally { width -> -width / 4 } + fadeIn()).togetherWith(
+                                    slideOutHorizontally { width -> width } + fadeOut()
+                                )
                             }
-                        )
-                    } else {
-                        val activeApp = navStack.last()
-                        
-                        // Handle physical back button presses correctly
-                        BackHandler {
-                            appViewModel.popApp()
-                        }
-
-                        WorkspaceScreen(
-                            app = activeApp,
-                            viewModel = appViewModel,
-                            onBack = {
+                        },
+                        label = "ScreenTransition"
+                    ) { currentStack ->
+                        if (currentStack.isEmpty()) {
+                            HomeScreen(
+                                viewModel = appViewModel,
+                                onAppClick = { app ->
+                                    appViewModel.pushApp(app)
+                                }
+                            )
+                        } else {
+                            val activeApp = currentStack.last()
+                            
+                            // Handle physical back button presses correctly
+                            BackHandler {
                                 appViewModel.popApp()
                             }
-                        )
+
+                            WorkspaceScreen(
+                                app = activeApp,
+                                viewModel = appViewModel,
+                                onBack = {
+                                    appViewModel.popApp()
+                                }
+                            )
+                        }
                     }
                 }
             }
